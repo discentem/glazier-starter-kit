@@ -12,9 +12,24 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-type ignoreFileFunc func(path string) bool
+func isFile(path string) (bool, error) {
+	if path == "" {
+		return false, fmt.Errorf("IsFile: received empty string to test")
+	}
+	p, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
 
-func ignoreFile(path string) bool {
+	return !p.IsDir(), nil
+}
+
+type ignorePathFunc func(path string) bool
+
+func ignorePath(path string) bool {
 	switch path {
 	case "sync.go":
 		return true
@@ -30,7 +45,7 @@ func ignoreFile(path string) bool {
 	}
 }
 
-func fileNames(root string, ignore ignoreFileFunc) ([]string, error) {
+func glazierConfigsAndResources(root string, ignore ignorePathFunc) ([]string, error) {
 	var names []string
 	err := filepath.Walk(".",
 		func(path string, info os.FileInfo, err error) error {
@@ -40,8 +55,14 @@ func fileNames(root string, ignore ignoreFileFunc) ([]string, error) {
 			if ignore(path) {
 				return nil
 			}
-			names = append(names, path)
-			return err
+			isfl, err := isFile(path)
+			if err != nil {
+				return err
+			}
+			if isfl {
+				names = append(names, path)
+			}
+			return nil
 		})
 	if err != nil {
 		return nil, err
@@ -49,66 +70,41 @@ func fileNames(root string, ignore ignoreFileFunc) ([]string, error) {
 	return names, nil
 }
 
-func IsFile(path string) (bool, error) {
-	if path == "" {
-		return false, fmt.Errorf("IsFile: received empty string to test")
-	}
-	p, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-
-	return !p.IsDir(), nil
-}
-
 func main() {
+	// Retrieve AWS Access Key and Secret Key from env variables
 	key := os.Getenv("ACCESS_KEY")
 	secret := os.Getenv("SECRET_KEY")
-
 	s3Config := &aws.Config{
 		Credentials: credentials.NewStaticCredentials(key, secret, ""),
 		Region:      aws.String("us-east-1"),
 	}
-
 	// The session the S3 Uploader will use
 	sess := session.Must(session.NewSession(s3Config))
 	// Create an uploader with the session and default options
 	uploader := s3manager.NewUploader(sess)
-
-	configs, err := fileNames(".", ignoreFile)
+	// Ex. value of configs [resources/logo.gif stable/config/build.yaml stable/release-id.yaml stable/release-info.yaml version-info.yaml]
+	configsAndResources, err := glazierConfigsAndResources(".", ignorePath) // ignorePath is a function which decides what types of files are NOT considered glazier configs or resources
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(configs)
-
-	for _, c := range configs {
-		isFile, err := IsFile(c)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if !isFile {
-			continue
-		}
-
+	// Loop through all the Glazier configs and resource files
+	for _, c := range configsAndResources {
 		f, err := os.Open(c)
 		if err != nil {
 			log.Fatalf("failed to open file %q, %v", c, err)
 		}
-
-		// Upload the file to S3.
+		// Upload the config/resource to S3.
 		result, err := uploader.Upload(&s3manager.UploadInput{
 			Bucket: aws.String(os.Getenv("BUCKET_NAME")),
-			Key:    &c,
-			Body:   f,
+			// S3 does not have folders in the traditional sense. The key represents the entire "path" up to and including the name of the object.
+			// glazierConfigsAndResources effectively converts file system path into keys, so
+			Key:  &c,
+			Body: f,
 		})
 		if err != nil {
 			log.Fatalf("failed to upload file, %v", err)
 		}
-		fmt.Printf("file uploaded to, %s\n", aws.StringValue(&result.Location))
+		log.Printf("file uploaded to: %s\n", aws.StringValue(&result.Location))
 	}
 
 }
