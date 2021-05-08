@@ -1,0 +1,23 @@
+templates:
+  test:
+     PSCommand: ['Get-Date', [0, 1]]
+
+controls:
+  - pin: ''
+    template:
+      - test
+  - pin: ''
+    choice:
+      name: test_thing
+      type: toggle
+      prompt: "test toggle"
+      options: [
+        {label: 'False', value: False, tip: ''},
+        {label: 'True', value: True, tip: ''},
+      ]
+  - pin: ''
+    ShowChooser: []
+  - pin: ''
+    template:
+      - test
+    
