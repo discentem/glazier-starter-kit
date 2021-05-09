@@ -45,7 +45,7 @@ func ignorePath(path string) bool {
 	}
 }
 
-func glazierConfigsAndResources(root string, ignore ignorePathFunc) ([]string, error) {
+func configsAndResources(root string, ignore ignorePathFunc) ([]string, error) {
 	var names []string
 	err := filepath.Walk(".",
 		func(path string, info os.FileInfo, err error) error {
@@ -82,13 +82,13 @@ func main() {
 	sess := session.Must(session.NewSession(s3Config))
 	// Create an uploader with the session and default options
 	uploader := s3manager.NewUploader(sess)
-	// Ex. value of configs [resources/logo.gif stable/config/build.yaml stable/release-id.yaml stable/release-info.yaml version-info.yaml]
-	configsAndResources, err := glazierConfigsAndResources(".", ignorePath) // ignorePath is a function which decides what types of files are NOT considered glazier configs or resources
+	// value of cnr: [resources/logo.gif stable/config/build.yaml stable/release-id.yaml stable/release-info.yaml version-info.yaml]
+	cnr, err := configsAndResources(".", ignorePath) // ignorePath is a function which decides what types of files are NOT considered glazier configs or resources
 	if err != nil {
 		log.Fatal(err)
 	}
 	// Loop through all the Glazier configs and resource files
-	for _, c := range configsAndResources {
+	for _, c := range cnr {
 		f, err := os.Open(c)
 		if err != nil {
 			log.Fatalf("failed to open file %q, %v", c, err)
@@ -97,7 +97,6 @@ func main() {
 		result, err := uploader.Upload(&s3manager.UploadInput{
 			Bucket: aws.String(os.Getenv("BUCKET_NAME")),
 			// S3 does not have folders in the traditional sense. The key represents the entire "path" up to and including the name of the object.
-			// glazierConfigsAndResources effectively converts file system path into keys, so
 			Key:  &c,
 			Body: f,
 		})

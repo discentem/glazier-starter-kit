@@ -1,2 +1,3 @@
 versions:
-  windows10: 'stable'
+  windows10-stable: 'stable'
+  windows10-dev: 'dev'
