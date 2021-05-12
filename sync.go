@@ -97,8 +97,9 @@ func main() {
 		result, err := uploader.Upload(&s3manager.UploadInput{
 			Bucket: aws.String(os.Getenv("BUCKET_NAME")),
 			// S3 does not have folders in the traditional sense. The key represents the entire "path" up to and including the name of the object.
-			Key:  &c,
-			Body: f,
+			Key:       &c,
+			Body:      f,
+			GrantRead: aws.String(`uri="http://acs.amazonaws.com/groups/global/AllUsers"`),
 		})
 		if err != nil {
 			log.Fatalf("failed to upload file, %v", err)
