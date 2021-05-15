@@ -1,10 +1,11 @@
-package main
+package sync
 
 import (
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -31,14 +32,10 @@ type ignorePathFunc func(path string) bool
 
 func ignorePath(path string) bool {
 	switch path {
-	case "sync.go":
-		return true
-	case "go.mod":
-		return true
-	case "go.sum":
+	case ".git":
 		return true
 	default:
-		if path[0:1] == "." {
+		if strings.HasPrefix(path, ".git") {
 			return true
 		}
 		return false
@@ -47,7 +44,7 @@ func ignorePath(path string) bool {
 
 func configsAndResources(root string, ignore ignorePathFunc) ([]string, error) {
 	var names []string
-	err := filepath.Walk(".",
+	err := filepath.Walk(root,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -70,7 +67,7 @@ func configsAndResources(root string, ignore ignorePathFunc) ([]string, error) {
 	return names, nil
 }
 
-func main() {
+func Execute(root string) {
 	// Retrieve AWS Access Key and Secret Key from env variables
 	key := os.Getenv("ACCESS_KEY")
 	secret := os.Getenv("SECRET_KEY")
@@ -83,7 +80,7 @@ func main() {
 	// Create an uploader with the session and default options
 	uploader := s3manager.NewUploader(sess)
 	// value of cnr: [resources/logo.gif stable/config/build.yaml stable/release-id.yaml stable/release-info.yaml version-info.yaml]
-	cnr, err := configsAndResources(".", ignorePath) // ignorePath is a function which decides what types of files are NOT considered glazier configs or resources
+	cnr, err := configsAndResources(root, ignorePath) // ignorePath is a function which decides what types of files are NOT considered glazier configs or resources
 	if err != nil {
 		log.Fatal(err)
 	}
