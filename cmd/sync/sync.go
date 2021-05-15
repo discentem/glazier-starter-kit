@@ -31,15 +31,7 @@ func isFile(path string) (bool, error) {
 type ignorePathFunc func(path string) bool
 
 func ignorePath(path string) bool {
-	switch path {
-	case ".git":
-		return true
-	default:
-		if strings.HasPrefix(path, ".git") {
-			return true
-		}
-		return false
-	}
+	return strings.HasPrefix(path, ".git")
 }
 
 func configsAndResources(root string, ignore ignorePathFunc) ([]string, error) {
@@ -67,7 +59,7 @@ func configsAndResources(root string, ignore ignorePathFunc) ([]string, error) {
 	return names, nil
 }
 
-func Execute(root string) {
+func Execute(root string) error {
 	// Retrieve AWS Access Key and Secret Key from env variables
 	key := os.Getenv("ACCESS_KEY")
 	secret := os.Getenv("SECRET_KEY")
@@ -82,13 +74,13 @@ func Execute(root string) {
 	// value of cnr: [resources/logo.gif stable/config/build.yaml stable/release-id.yaml stable/release-info.yaml version-info.yaml]
 	cnr, err := configsAndResources(root, ignorePath) // ignorePath is a function which decides what types of files are NOT considered glazier configs or resources
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	// Loop through all the Glazier configs and resource files
 	for _, c := range cnr {
 		f, err := os.Open(c)
 		if err != nil {
-			log.Fatalf("failed to open file %q, %v", c, err)
+			return fmt.Errorf("failed to open file %q, %v", c, err)
 		}
 		// Upload the config/resource to S3.
 		result, err := uploader.Upload(&s3manager.UploadInput{
@@ -99,9 +91,9 @@ func Execute(root string) {
 			GrantRead: aws.String(`uri="http://acs.amazonaws.com/groups/global/AllUsers"`),
 		})
 		if err != nil {
-			log.Fatalf("failed to upload file, %v", err)
+			return fmt.Errorf("failed to upload file, %v", err)
 		}
 		log.Printf("file uploaded to: %s\n", aws.StringValue(&result.Location))
 	}
-
+	return nil
 }

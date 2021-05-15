@@ -2,11 +2,8 @@ package unattend
 
 import (
 	"encoding/xml"
-	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
-	"os"
 )
 
 type Unattend struct {
@@ -202,17 +199,21 @@ type Unattend struct {
 	} `xml:"offlineImage"`
 }
 
-func main() {
+func Execute(source string, destination string) error {
 
-	pwd, err := os.Getwd()
+	byt, err := ioutil.ReadFile(source)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	up := flag.String("unattend_path", pwd, "Path to unattend.xml")
-	byt, err := ioutil.ReadFile(fmt.Sprintf("%s/unattend.xml", *up))
-	if err != nil {
-		log.Fatal(err)
+	u := &Unattend{}
+
+	if err := xml.Unmarshal(byt, u); err != nil {
+		return err
 	}
-	fmt.Println(string(byt))
+
+	u.Settings[1].Component[1].AutoLogon.Password.Value = "blargety"
+
+	fmt.Printf("%+v\n", u.Settings[1].Component[1].AutoLogon.Password)
+	return nil
 
 }
