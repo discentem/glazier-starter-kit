@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/discentem/glazier-config/cmd/sync"
-	"github.com/discentem/glazier-config/cmd/unattend"
-	"github.com/sethvargo/go-password/password"
 	"github.com/spf13/cobra"
 )
 
@@ -12,59 +12,27 @@ var syncCmd = &cobra.Command{
 	Short: "Sync Glazier configs and resources to s3",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			args = make([]string, 1)
-			args[0] = "."
-		}
-		return sync.Execute(args[0])
-	},
-}
-
-var unattendCmd = &cobra.Command{
-	Use:   "unattend",
-	Short: "Generate Unattend with random password",
-	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		src, err := cmd.LocalFlags().GetString("source")
+		b, err := cmd.LocalFlags().GetString("bucket_name")
 		if err != nil {
 			return err
 		}
-		dest, err := cmd.LocalFlags().GetString("destination")
+		k, err := cmd.LocalFlags().GetString("access_key")
 		if err != nil {
 			return err
 		}
-		homePage, err := cmd.LocalFlags().GetString("home_page")
+		s, err := cmd.LocalFlags().GetString("secret_key")
 		if err != nil {
 			return err
 		}
-		oemSupport, err := cmd.LocalFlags().GetString("oem_support_url")
+		region, err := cmd.LocalFlags().GetString("region")
 		if err != nil {
 			return err
 		}
-		registeredCo, err := cmd.LocalFlags().GetString("registered_co")
+		r, err := cmd.LocalFlags().GetString("root")
 		if err != nil {
 			return err
 		}
-		pass, err := cmd.LocalFlags().GetString("password")
-		if err != nil {
-			return err
-		}
-		if pass == "" {
-			pass, err = password.Generate(60, 20, 0, false, true)
-			if err != nil {
-				return err
-			}
-		}
-		s := unattend.Settings{
-			Source:       src,
-			Destination:  dest,
-			HomePage:     homePage,
-			OEMSupport:   oemSupport,
-			RegisteredCo: registeredCo,
-			Pass:         pass,
-		}
-
-		return s.Execute()
+		return sync.Execute(b, k, s, region, r)
 	},
 }
 
@@ -77,17 +45,21 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
+
 func init() {
 	rootCmd.AddCommand(syncCmd)
 
-	unattendCmd.Flags().String("source", "unattend.xml", "Source unattend.xml file")
-	unattendCmd.Flags().String("destination", "generated_unattend.xml", "Generated unattend.xml")
-	unattendCmd.Flags().String("home_page", "https://google.com", "Microsoft-Windows-IE-InternetExplorer Home_Page")
-	unattendCmd.Flags().String("oem_support_url", "https://dell.com", "OEMInformation SupportURL")
-	unattendCmd.Flags().String("registered_co", "ACME", "RegisteredOrganization")
-	unattendCmd.Flags().String("password", "", "Administrator password. If no password is provided, will be randomized.")
-
-	rootCmd.AddCommand(unattendCmd)
+	syncCmd.Flags().String("root", ".", "Path to start recursive s3 sync from")
+	syncCmd.Flags().String("access_key", os.Getenv("ACCESS_KEY"), "AWS Access Key")
+	syncCmd.Flags().String("secret_key", os.Getenv("SECRET_KEY"), "AWS Secret Key")
+	syncCmd.Flags().String("bucket_name", os.Getenv("BUCKET_NAME"), "AWS Bucket Name")
+	syncCmd.Flags().String("region", getEnv("REGION", "us-east-1"), "AWS Bucket Name")
 }
 
 func Execute() error {

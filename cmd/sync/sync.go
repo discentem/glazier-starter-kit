@@ -59,13 +59,13 @@ func configsAndResources(root string, ignore ignorePathFunc) ([]string, error) {
 	return names, nil
 }
 
-func Execute(root string) error {
+func Execute(bucketName, accessKey, secretKey, region, root string) error {
 	// Retrieve AWS Access Key and Secret Key from env variables
-	key := os.Getenv("ACCESS_KEY")
-	secret := os.Getenv("SECRET_KEY")
+	key := accessKey
+	secret := secretKey
 	s3Config := &aws.Config{
 		Credentials: credentials.NewStaticCredentials(key, secret, ""),
-		Region:      aws.String("us-east-1"),
+		Region:      aws.String(region),
 	}
 	// The session the S3 Uploader will use
 	sess := session.Must(session.NewSession(s3Config))
@@ -84,7 +84,7 @@ func Execute(root string) error {
 		}
 		// Upload the config/resource to S3.
 		result, err := uploader.Upload(&s3manager.UploadInput{
-			Bucket: aws.String(os.Getenv("BUCKET_NAME")),
+			Bucket: aws.String(bucketName),
 			// S3 does not have folders in the traditional sense. The key represents the entire "path" up to and including the name of the object.
 			Key:       &c,
 			Body:      f,
