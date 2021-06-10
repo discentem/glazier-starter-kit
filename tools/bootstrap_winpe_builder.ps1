@@ -49,3 +49,7 @@ choco install git -y
 
 & 'C:\Program Files\Git\bin\git.exe' clone https://github.com/google/glazier.git C:\OSDCloud\Autopilot\glazier
 & $pyEXE -m pip install pywin32
+
+# Create the iso
+# Create the usb
+# Edit the winpeinit file. See OSDCloud's code
