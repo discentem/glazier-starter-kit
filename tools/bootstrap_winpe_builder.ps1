@@ -47,5 +47,5 @@ Write-Host "Installing Python $pyVersion"
 
 choco install git -y
 
-git clone https://github.com/google/glazier.git C:\OSDCloud\Autopilot\glazier
+& 'C:\Program Files\Git\bin\git.exe' clone https://github.com/google/glazier.git C:\OSDCloud\Autopilot\glazier
 & $pyEXE -m pip install pywin32
