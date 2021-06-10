@@ -5,6 +5,8 @@ $pyEXEUrl = "https://www.python.org/ftp/python/$pyVersion/python-$pyVersion-amd6
 $pyTargetDir = "C:\OSDCloud\Autopilot\Python39\"
 $pyEXE = "$pyTargetDir\python.exe"
 
+$scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
+
 Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')) 
 choco install windows-adk -y
 choco install windows-adk-winpe -y
@@ -47,9 +49,26 @@ Write-Host "Installing Python $pyVersion"
 
 choco install git -y
 
-& 'C:\Program Files\Git\bin\git.exe' clone https://github.com/google/glazier.git C:\OSDCloud\Autopilot\glazier
+# Borrowed from https://github.com/OSDeploy/OSD/blob/master/Public/OSDCloud/Edit-OSDCloud.winpe.ps1
+$WorkspacePath = Get-OSDCloud.workspace -ErrorAction Stop
+$MountMyWindowsImage = Mount-MyWindowsImage -ImagePath "$WorkspacePath\Media\Sources\boot.wim"
+$MountPath = $MountMyWindowsImage.Path
+
+# Not idempotent yet
+Write-Host "Cloning Glazier github repo..."
+& 'C:\Program Files\Git\bin\git.exe' clone https://github.com/google/glazier.git C:\glazier
+Write-Host "Running '$pyEXE -m pip install pywin32'"
 & $pyEXE -m pip install pywin32
 
-# Create the iso
-# Create the usb
+Write-Host "Copying Glazier source code inside the image"
+robocopy "C:\glazier\" "$MountPath\glazier\"
+
 # Edit the winpeinit file. See OSDCloud's code
+robocopy "$scriptPath\" "$MountPath\Windows\System32\" autobuild.ps1
+$Startnet = @'
+wpeinit
+start PowerShell -Nol -W Mi
+powershell -NoProfile -NoLogo -Command Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
+powershell -NoProfile -NoLogo -WindowStyle Maximized -NoExit -File "X:\Windows\System32\autobuild.ps1"
+'@
+$Startnet | Out-File -FilePath "$MountPath\Windows\System32\Startnet.cmd" -Force -Encoding ascii
