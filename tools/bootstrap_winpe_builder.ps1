@@ -43,22 +43,25 @@ if ((Get-FileHash ($pythonSavePath) -Algorithm MD5).Hash -ne $pythonInstallHash)
     curl $pyEXEUrl -UseBasicParsing -OutFile $pythonSavePath
 }
 
-# This is not idempotent yet
-Write-Host "Installing Python $pyVersion"
-& $pythonSavePath TargetDir= Include_launcher=0 /passive
-
-choco install git -y
-
 # Borrowed from https://github.com/OSDeploy/OSD/blob/master/Public/OSDCloud/Edit-OSDCloud.winpe.ps1
 $WorkspacePath = Get-OSDCloud.workspace -ErrorAction Stop
 $MountMyWindowsImage = Mount-MyWindowsImage -ImagePath "$WorkspacePath\Media\Sources\boot.wim"
 $MountPath = $MountMyWindowsImage.Path
+
+# This is not idempotent yet
+Write-Host "Installing Python $pyVersion"
+mkdir $MountPath\Python
+& $pythonSavePath TargetDir=$MountPath\Python Include_launcher=0 /passive
+
+choco install git -y
 
 # Not idempotent yet
 Write-Host "Cloning Glazier github repo..."
 & 'C:\Program Files\Git\bin\git.exe' clone https://github.com/google/glazier.git C:\glazier
 Write-Host "Running '$pyEXE -m pip install pywin32'"
 & $pyEXE -m pip install pywin32
+
+
 
 Write-Host "Copying Glazier source code inside the image"
 robocopy "C:\glazier\" "$MountPath\glazier\"
