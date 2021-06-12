@@ -2,6 +2,10 @@ Param(
     [string]config_root_path="http://glazier"
 )
 
+if ($config_root_path -eq "") {
+  $config_root_path = "http://glazier"
+}
+
 $Host.UI.RawUI.WindowTitle = 'Glazier'
 $env:LOCALAPPDATA = 'X:\'
 $env:PYTHONPATH = 'X:\glazier\src'

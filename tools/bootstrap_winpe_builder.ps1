@@ -2,16 +2,17 @@ $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 
 $abjson = "$scriptPath\autobuild.json"
 $json = ""
+$config_root_path = ""
 if ((Test-Path $abjson) -eq $True) {
     $json = Get-Content $abjson | Out-String | ConvertFrom-Json
+    $config_root_path = $json.config_root_path
 }
-$config_root_path = $json.config_root_path
 
 $pyVersion = "3.9.5"
 $pythonSavePath = "~\Downloads\python-$pyVersion-amd64.exe"
 $pythonInstallHash = "53a354a15baed952ea9519a7f4d87c3f"
 $pyEXEUrl = "https://www.python.org/ftp/python/$pyVersion/python-$pyVersion-amd64.exe"
-$pyTargetDir = "C:\OSDCloud\Autopilot\Python39\"
+$pyTargetDir = "$MountPath\Python"
 $pyEXE = "$pyTargetDir\python.exe"
 
 Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')) 
@@ -58,7 +59,7 @@ $MountPath = $MountMyWindowsImage.Path
 # This is not idempotent yet
 Write-Host "Installing Python $pyVersion"
 mkdir $MountPath\Python
-& $pythonSavePath TargetDir=$MountPath\Python Include_launcher=0 /passive
+& $pythonSavePath TargetDir=$pyTargetDir Include_launcher=0 /passive
 
 choco install git -y
 
@@ -79,11 +80,12 @@ $Startnet = @"
 wpeinit
 start PowerShell -Nol -W Mi
 powershell -NoProfile -NoLogo -Command Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
-powershell -NoProfile -NoLogo -WindowStyle Maximized -NoExit -File "X:\Windows\System32\autobuild.ps1 -config_root_path {0}"
+powershell -NoProfile -NoLogo -WindowStyle Maximized -NoExit -File "X:\Windows\System32\autobuild.ps1" -config_root_path {0}
 "@ -f $config_root_path
 Write-Host "Writing Startnet.cmd"
 $Startnet | Out-File -FilePath "$MountPath\Windows\System32\Startnet.cmd" -Force -Encoding ascii
-
+Write-Host "Saving WIM"
+$MountMyWindowsImage | Dismount-MyWindowsImage -Save
 ## Add Edit-OSDCloud.winpe
 
 Write-Host "Creating ISO"
