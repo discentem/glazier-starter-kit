@@ -71,6 +71,8 @@ Write-Host "Cloning and pulling Glazier github repo..."
 & 'C:\Program Files\Git\bin\git.exe' clone https://github.com/google/glazier.git C:\glazier
 & 'C:\Program Files\Git\bin\git.exe' -C C:\glazier\ pull
 Write-Host "Install Glazier pip requirements"
+# Reload the path: https://stackoverflow.com/questions/17794507/reload-the-path-in-powershell
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User") 
 & $pyEXE -m pip install -r C:\glazier\requirements.txt
 Write-Host "Running '$pyEXE -m pip install pywin32'"
 & $pyEXE -m pip install pywin32
