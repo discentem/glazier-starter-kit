@@ -1,11 +1,18 @@
+$scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
+
+$abjson = "$scriptPath\autobuild.json"
+$json = ""
+if ((Test-Path $abjson) -eq $True) {
+    $json = Get-Content $abjson | Out-String | ConvertFrom-Json
+}
+$config_root_path = $json.config_root_path
+
 $pyVersion = "3.9.5"
 $pythonSavePath = "~\Downloads\python-$pyVersion-amd64.exe"
 $pythonInstallHash = "53a354a15baed952ea9519a7f4d87c3f"
 $pyEXEUrl = "https://www.python.org/ftp/python/$pyVersion/python-$pyVersion-amd64.exe"
 $pyTargetDir = "C:\OSDCloud\Autopilot\Python39\"
 $pyEXE = "$pyTargetDir\python.exe"
-
-$scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 
 Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')) 
 choco install windows-adk -y
@@ -66,12 +73,18 @@ Write-Host "Running '$pyEXE -m pip install pywin32'"
 Write-Host "Copying Glazier source code inside the image"
 robocopy "C:\glazier\" "$MountPath\glazier\"
 
-# Edit the winpeinit file. See OSDCloud's code
+Write-Host "Copying autobuild.ps1 to WIM"
 robocopy "$scriptPath\" "$MountPath\Windows\System32\" autobuild.ps1
-$Startnet = @'
+$Startnet = @"
 wpeinit
 start PowerShell -Nol -W Mi
 powershell -NoProfile -NoLogo -Command Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
-powershell -NoProfile -NoLogo -WindowStyle Maximized -NoExit -File "X:\Windows\System32\autobuild.ps1"
-'@
+powershell -NoProfile -NoLogo -WindowStyle Maximized -NoExit -File "X:\Windows\System32\autobuild.ps1 -config_root_path {0}"
+"@ -f $config_root_path
+Write-Host "Writing Startnet.cmd"
 $Startnet | Out-File -FilePath "$MountPath\Windows\System32\Startnet.cmd" -Force -Encoding ascii
+
+## Add Edit-OSDCloud.winpe
+
+Write-Host "Creating ISO"
+New-OSDCloud.iso
