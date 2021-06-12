@@ -1,3 +1,5 @@
+#$MountMyWindowsImage | Dismount-MyWindowsImage
+
 $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 
 $abjson = "$scriptPath\autobuild.json"
@@ -12,8 +14,6 @@ $pyVersion = "3.9.5"
 $pythonSavePath = "~\Downloads\python-$pyVersion-amd64.exe"
 $pythonInstallHash = "53a354a15baed952ea9519a7f4d87c3f"
 $pyEXEUrl = "https://www.python.org/ftp/python/$pyVersion/python-$pyVersion-amd64.exe"
-$pyTargetDir = "$MountPath\Python"
-$pyEXE = "$pyTargetDir\python.exe"
 
 Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')) 
 choco install windows-adk -y
@@ -56,6 +56,9 @@ $WorkspacePath = Get-OSDCloud.workspace -ErrorAction Stop
 $MountMyWindowsImage = Mount-MyWindowsImage -ImagePath "$WorkspacePath\Media\Sources\boot.wim"
 $MountPath = $MountMyWindowsImage.Path
 
+$pyTargetDir = "$MountPath\Python"
+$pyEXE = "$pyTargetDir\python.exe"
+
 # This is not idempotent yet
 Write-Host "Installing Python $pyVersion"
 mkdir $MountPath\Python
@@ -64,15 +67,18 @@ mkdir $MountPath\Python
 choco install git -y
 
 # Not idempotent yet
-Write-Host "Cloning Glazier github repo..."
+Write-Host "Cloning and pulling Glazier github repo..."
 & 'C:\Program Files\Git\bin\git.exe' clone https://github.com/google/glazier.git C:\glazier
+& 'C:\Program Files\Git\bin\git.exe' -C C:\glazier\ pull
+Write-Host "Install Glazier pip requirements"
+& $pyEXE -m pip install -r C:\glazier\requirements.txt
 Write-Host "Running '$pyEXE -m pip install pywin32'"
 & $pyEXE -m pip install pywin32
 
 
 
 Write-Host "Copying Glazier source code inside the image"
-robocopy "C:\glazier\" "$MountPath\glazier\"
+robocopy "C:\glazier\" "$MountPath\glazier\" /E
 
 Write-Host "Copying autobuild.ps1 to WIM"
 robocopy "$scriptPath\" "$MountPath\Windows\System32\" autobuild.ps1
@@ -86,7 +92,5 @@ Write-Host "Writing Startnet.cmd"
 $Startnet | Out-File -FilePath "$MountPath\Windows\System32\Startnet.cmd" -Force -Encoding ascii
 Write-Host "Saving WIM"
 $MountMyWindowsImage | Dismount-MyWindowsImage -Save
-## Add Edit-OSDCloud.winpe
-
 Write-Host "Creating ISO"
 New-OSDCloud.iso
