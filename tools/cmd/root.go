@@ -56,7 +56,7 @@ func defaultEnv(key, fallback string) string {
 func Execute() error {
 	rootCmd.AddCommand(syncCmd)
 
-	syncCmd.Flags().String("root", "./../glazier-repo", "Path to start recursive s3 sync from")
+	syncCmd.Flags().String("root", "./../glazier-repo/.", "Path to start recursive s3 sync from")
 	accessKey := syncCmd.Flags().String("access_key", os.Getenv("ACCESS_KEY"), "AWS Access Key")
 	if *accessKey == "" {
 		return errors.New("access_key must not be an empty string")

@@ -83,10 +83,11 @@ func Execute(bucketName, accessKey, secretKey, region, root string) error {
 			return fmt.Errorf("failed to open file %q, %v", c, err)
 		}
 		// Upload the config/resource to S3.
+		key := strings.Replace(c, filepath.Dir(root), "", -1)
 		result, err := uploader.Upload(&s3manager.UploadInput{
 			Bucket: aws.String(bucketName),
 			// S3 does not have folders in the traditional sense. The key represents the entire "path" up to and including the name of the object.
-			Key:       &c,
+			Key:       &key,
 			Body:      f,
 			GrantRead: aws.String(`uri="http://acs.amazonaws.com/groups/global/AllUsers"`),
 		})
