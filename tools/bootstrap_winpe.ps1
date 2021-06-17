@@ -18,8 +18,9 @@ $pythonSavePath = "~\Downloads\python-$pyVersion-amd64.exe"
 $pythonInstallHash = "53a354a15baed952ea9519a7f4d87c3f"
 $pyEXEUrl = "https://www.python.org/ftp/python/$pyVersion/python-$pyVersion-amd64.exe"
 
-# Install Chocoately. It's not secure :P 
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')) 
+# Install Chocoately. Borrowed from https://tseknet.com/blog/chocolatey
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Force
+iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex
 # Install Windows ADK
 choco install windows-adk -y
 choco install windows-adk-winpe -y
@@ -54,7 +55,7 @@ if ((Test-Path $pythonSavePath) -eq $False) {
 }
 
 # Verify hash of Python installer
-if ((Get-FileHash ($pythonSavePath) -Algorithm MD5).Hash -ne $pythonInstallHash) {
+while ((Get-FileHash ($pythonSavePath) -Algorithm MD5).Hash -ne $pythonInstallHash) {
     Write-Host "Python hashes did not match. Removing and redownloading"
     rm $pythonSavePath
     curl $pyEXEUrl -UseBasicParsing -OutFile $pythonSavePath
