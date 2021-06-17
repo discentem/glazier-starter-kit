@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"os"
 
 	"github.com/discentem/glazier-config/cmd/sync"
@@ -37,7 +38,7 @@ var syncCmd = &cobra.Command{
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "things",
+	Use:   "",
 	Short: "tools for managing glazier repo",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -45,24 +46,30 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func getEnv(key, fallback string) string {
+func defaultEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
 	}
 	return fallback
 }
 
-func init() {
+func Execute() error {
 	rootCmd.AddCommand(syncCmd)
 
-	syncCmd.Flags().String("root", "glazier-repo", "Path to start recursive s3 sync from")
-	syncCmd.Flags().String("access_key", os.Getenv("ACCESS_KEY"), "AWS Access Key")
-	syncCmd.Flags().String("secret_key", os.Getenv("SECRET_KEY"), "AWS Secret Key")
-	syncCmd.Flags().String("bucket_name", os.Getenv("BUCKET_NAME"), "AWS Bucket Name")
-	syncCmd.Flags().String("region", getEnv("REGION", "us-east-1"), "AWS Bucket Name")
-}
-
-func Execute() error {
+	syncCmd.Flags().String("root", "./../glazier-repo", "Path to start recursive s3 sync from")
+	accessKey := syncCmd.Flags().String("access_key", os.Getenv("ACCESS_KEY"), "AWS Access Key")
+	if *accessKey == "" {
+		return errors.New("access_key must not be an empty string")
+	}
+	secretKey := syncCmd.Flags().String("secret_key", os.Getenv("SECRET_KEY"), "AWS Secret Key")
+	if *secretKey == "" {
+		return errors.New("secret_key must not be an empty string")
+	}
+	bucket := syncCmd.Flags().String("bucket_name", os.Getenv("BUCKET_NAME"), "AWS Bucket Name")
+	if *bucket == "" {
+		return errors.New("bucket_name must not be an empty string")
+	}
+	syncCmd.Flags().String("region", defaultEnv("REGION", "us-east-1"), "AWS Bucket Name")
 	if err := rootCmd.Execute(); err != nil {
 		return err
 	}
