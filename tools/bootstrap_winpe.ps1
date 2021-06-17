@@ -89,7 +89,7 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 # Install Glazier requirements
 & $pyEXE -m pip install -r C:\glazier\requirements.txt
 Write-Host "Running '$pyEXE -m pip install pywin32'"
-# Install additional Glazier depedency that isn't included in requirements.txt. I think this isn't in the requirements.txt file so that CI tests can run on Linux.
+# Install an additional Glazier dependency that isn't included in requirements.txt.
 & $pyEXE -m pip install pywin32
 
 
