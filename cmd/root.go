@@ -55,7 +55,7 @@ func getEnv(key, fallback string) string {
 func init() {
 	rootCmd.AddCommand(syncCmd)
 
-	syncCmd.Flags().String("root", ".", "Path to start recursive s3 sync from")
+	syncCmd.Flags().String("root", "glazier-repo", "Path to start recursive s3 sync from")
 	syncCmd.Flags().String("access_key", os.Getenv("ACCESS_KEY"), "AWS Access Key")
 	syncCmd.Flags().String("secret_key", os.Getenv("SECRET_KEY"), "AWS Secret Key")
 	syncCmd.Flags().String("bucket_name", os.Getenv("BUCKET_NAME"), "AWS Bucket Name")
