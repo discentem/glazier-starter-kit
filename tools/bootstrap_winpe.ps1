@@ -1,5 +1,7 @@
 Param(
-    [string]$config_root_path = ""
+    [string]$config_root_path = "",
+    [string]$make_usb = $false,
+    [string]$driver_path = "C:\drivers"
 )
 
 # $scriptPath is the absolute path where this script is executing from
@@ -72,12 +74,17 @@ while ((Get-FileHash ($pythonSavePath) -Algorithm MD5).Hash -ne $pythonInstallHa
 }
 
 # Add all of our drivers to WinPE. https://osdcloud.osdeploy.com/get-started/edit-osdcloud.winpe
-Edit-OSDCloud.winpe -DriverPath C:\drivers
+# Edit-OSDCloud.winpe -DriverPath C:\drivers
 
 # Mount our WIM. Borrowed from https://github.com/OSDeploy/OSD/blob/master/Public/OSDCloud/Edit-OSDCloud.winpe.ps1
 $WorkspacePath = Get-OSDCloud.workspace -ErrorAction Stop
 $MountMyWindowsImage = Mount-MyWindowsImage -ImagePath "$WorkspacePath\Media\Sources\boot.wim"
 $MountPath = $MountMyWindowsImage.Path
+
+# Add all the drivers. Copied from https://github.com/OSDeploy/OSD/blob/master/Public/OSDCloud/Edit-OSDCloud.winpe.ps1#L117-L119
+foreach ($driver in $driver_path) {
+    Add-WindowsDriver -Path "$($MountPath)" -Driver "$driver" -Recurse -ForceUnsigned
+}
 
 # $pyTargetDir is the directory where Python will get installed
 $pyTargetDir = "$MountPath\Python"
@@ -131,4 +138,7 @@ Write-Host "Saving WIM"
 $MountMyWindowsImage | Dismount-MyWindowsImage -Save
 Write-Host "Creating ISO"
 New-OSDCloud.iso
-New-OSDCloud.usb
+if ($make_usb) {
+    Write-Host "Creating USB"
+    New-OSDCloud.usb
+}
