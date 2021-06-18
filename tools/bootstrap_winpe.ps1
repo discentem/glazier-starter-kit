@@ -1,21 +1,31 @@
-#$MountMyWindowsImage | Dismount-MyWindowsImage
+Param(
+    [string]$config_root_path = ""
+)
 
-# $scriptPath is helpful for reference files relative to wherever this script is running
+# $scriptPath is the absolute path where this script is executing from
 $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 
-# Read a value for config_root_path from $scriptPath\autobuild.json. Note tools\autobuild.json is in the .gitignore file
+# if $scriptPath\autobuild.json exists, get a value for $config_root_path from it. Note tools\autobuild.json is in the .gitignore file.
 $abjson = "$scriptPath\autobuild.json"
-$json = ""
 $config_root_path = ""
 if ((Test-Path $abjson) -eq $True) {
     $json = Get-Content $abjson | Out-String | ConvertFrom-Json
     $config_root_path = $json.config_root_path
+# get a value for $config_root_path from the CLI flags. If it's empty, exit 1 (bail)
+} else {
+    if ($config_root_path -eq "") {
+        Write-Host "config_root_path cannot be an empty string"
+        exit(1)
+    }
 }
 
-# Set some variables for python metadata
+# $pyVersion is the Python version that will be downloaded
 $pyVersion = "3.9.5"
+# $pythonSavePath is place where the Python installer will be downloaded on disk
 $pythonSavePath = "~\Downloads\python-$pyVersion-amd64.exe"
+# $pythonInstallHash is the hash used to verify the Python installer download
 $pythonInstallHash = "53a354a15baed952ea9519a7f4d87c3f"
+# $pyEXEUrl is the url where the Python installer will be obtained
 $pyEXEUrl = "https://www.python.org/ftp/python/$pyVersion/python-$pyVersion-amd64.exe"
 
 # Install Chocoately. Borrowed from https://tseknet.com/blog/chocolatey
@@ -61,13 +71,17 @@ while ((Get-FileHash ($pythonSavePath) -Algorithm MD5).Hash -ne $pythonInstallHa
     curl $pyEXEUrl -UseBasicParsing -OutFile $pythonSavePath
 }
 
+# Add all of our drivers to WinPE. https://osdcloud.osdeploy.com/get-started/edit-osdcloud.winpe
+Edit-OSDCloud.winpe -DriverPath C:\drivers
+
 # Mount our WIM. Borrowed from https://github.com/OSDeploy/OSD/blob/master/Public/OSDCloud/Edit-OSDCloud.winpe.ps1
 $WorkspacePath = Get-OSDCloud.workspace -ErrorAction Stop
 $MountMyWindowsImage = Mount-MyWindowsImage -ImagePath "$WorkspacePath\Media\Sources\boot.wim"
 $MountPath = $MountMyWindowsImage.Path
 
-# Variables we can use to install Python inside of the mounted WIM
+# $pyTargetDir is the directory where Python will get installed
 $pyTargetDir = "$MountPath\Python"
+# $pyEXE is shorthand for referring to python.exe. This variable will be used to install pip modules later.
 $pyEXE = "$pyTargetDir\python.exe"
 
 # This is not idempotent yet
@@ -101,7 +115,7 @@ Write-Host "Copying autobuild.ps1 to WIM"
 # Copy autobuild.ps1 into WIM
 robocopy "$scriptPath\" "$MountPath\Windows\System32\" autobuild.ps1
 
-# Write out Startnet.cmd, which will call autobuild.ps1
+# Write out Startnet.cmd, which will run when WinPE boots. In turn, this will launch autobuild.ps1 which will run autobuild.py (Glazier)
 $Startnet = @"
 wpeinit
 start PowerShell -Nol -W Mi
@@ -109,9 +123,11 @@ powershell -NoProfile -NoLogo -Command Set-ExecutionPolicy -ExecutionPolicy Bypa
 powershell -NoProfile -NoLogo -WindowStyle Maximized -NoExit -File "X:\Windows\System32\autobuild.ps1" -config_root_path {0}
 "@ -f $config_root_path
 Write-Host "Writing Startnet.cmd"
+# Save our changes to Startnet.cmd
 $Startnet | Out-File -FilePath "$MountPath\Windows\System32\Startnet.cmd" -Force -Encoding ascii
 Write-Host "Saving WIM"
 # Dismount and save WIM
+#Save-WindowsImage -Path $MountPath
 $MountMyWindowsImage | Dismount-MyWindowsImage -Save
 Write-Host "Creating ISO"
 New-OSDCloud.iso
