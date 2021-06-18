@@ -116,7 +116,7 @@ robocopy "C:\glazier\" "$MountPath\glazier\" /E /PURGE
 
 Write-Host "Copying glazier-resources to WIM"
 mkdir "$MountPath\glazier-resources"
-robocopy "$scriptPath\" "$MountPath\glazier-resources" /E /PURGE
+robocopy "$scriptPath\glazier-resources" "$MountPath\glazier-resources" \*.* /E /PURGE
 
 Write-Host "Copying autobuild.ps1 to WIM"
 # Copy autobuild.ps1 into WIM

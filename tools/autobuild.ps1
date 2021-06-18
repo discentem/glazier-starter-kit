@@ -14,7 +14,7 @@ Write-Output 'Starting Glazier imaging process...'
 # For a full list of Glazier flags, execute `python autobuild.py --helpfull`
 $py_args = @(
   "X:\glazier\glazier\autobuild.py",
-  "--config_root_path=$config_server",
+  "--config_server=$config_server",
   '--resource_path=X:\glazier-resources',
   '--glazier_spec_os=windows10-stable',
   '--preserve_tasks=true'
