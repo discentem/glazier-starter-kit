@@ -1,6 +1,6 @@
 Param(
-    [string]$config_root_path = "",
-    [string]$make_usb = $false,
+    [string]$config_server = "",
+    [string]$make_usb="",
     [string]$driver_path = "C:\drivers"
 )
 
@@ -9,14 +9,13 @@ $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 
 # if $scriptPath\autobuild.json exists, get a value for $config_root_path from it. Note tools\autobuild.json is in the .gitignore file.
 $abjson = "$scriptPath\autobuild.json"
-$config_root_path = ""
 if ((Test-Path $abjson) -eq $True) {
     $json = Get-Content $abjson | Out-String | ConvertFrom-Json
-    $config_root_path = $json.config_root_path
+    $config_server = $json.config_server
 # get a value for $config_root_path from the CLI flags. If it's empty, exit 1 (bail)
 } else {
-    if ($config_root_path -eq "") {
-        Write-Host "config_root_path cannot be an empty string"
+    if ($config_server -eq "") {
+        Write-Host "config_server cannot be an empty string"
         exit(1)
     }
 }
@@ -73,9 +72,6 @@ while ((Get-FileHash ($pythonSavePath) -Algorithm MD5).Hash -ne $pythonInstallHa
     curl $pyEXEUrl -UseBasicParsing -OutFile $pythonSavePath
 }
 
-# Add all of our drivers to WinPE. https://osdcloud.osdeploy.com/get-started/edit-osdcloud.winpe
-# Edit-OSDCloud.winpe -DriverPath C:\drivers
-
 # Mount our WIM. Borrowed from https://github.com/OSDeploy/OSD/blob/master/Public/OSDCloud/Edit-OSDCloud.winpe.ps1
 $WorkspacePath = Get-OSDCloud.workspace -ErrorAction Stop
 $MountMyWindowsImage = Mount-MyWindowsImage -ImagePath "$WorkspacePath\Media\Sources\boot.wim"
@@ -116,19 +112,23 @@ Write-Host "Running '$pyEXE -m pip install pywin32'"
 
 # Recursively copy Glazier source code into WIM
 Write-Host "Copying Glazier source code inside the image"
-robocopy "C:\glazier\" "$MountPath\glazier\" /E
+robocopy "C:\glazier\" "$MountPath\glazier\" /E /PURGE
+
+Write-Host "Copying glazier-resources to WIM"
+mkdir "$MountPath\glazier-resources"
+robocopy "$scriptPath\" "$MountPath\glazier-resources" /E /PURGE
 
 Write-Host "Copying autobuild.ps1 to WIM"
 # Copy autobuild.ps1 into WIM
-robocopy "$scriptPath\" "$MountPath\Windows\System32\" autobuild.ps1
+robocopy "$scriptPath\" "$MountPath\Windows\System32\" autobuild.ps1 /PURGE
 
-# Write out Startnet.cmd, which will run when WinPE boots. In turn, this will launch autobuild.ps1 which will run autobuild.py (Glazier)
+# Write out Startnet.cmd, which will run when WinPE boots. This will launch the CLI Wifi menu and then autobuild.ps1.
 $Startnet = @"
 wpeinit
 start /wait PowerShell -NoL -C Start-WinREWiFi
 powershell -NoProfile -NoLogo -Command Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
-powershell -NoProfile -NoLogo -WindowStyle Maximized -NoExit -File "X:\Windows\System32\autobuild.ps1" -config_root_path {0}
-"@ -f $config_root_path
+powershell -NoProfile -NoLogo -WindowStyle Maximized -NoExit -File "X:\Windows\System32\autobuild.ps1" -config_server {0}
+"@ -f $config_server
 Write-Host "Writing Startnet.cmd"
 # Save our changes to Startnet.cmd
 $Startnet | Out-File -FilePath "$MountPath\Windows\System32\Startnet.cmd" -Force -Encoding ascii
@@ -138,7 +138,7 @@ Write-Host "Saving WIM"
 $MountMyWindowsImage | Dismount-MyWindowsImage -Save
 Write-Host "Creating ISO"
 New-OSDCloud.iso
-if ($make_usb) {
+if ($make_usb -eq 'true') {
     Write-Host "Creating USB"
     New-OSDCloud.usb
 }
