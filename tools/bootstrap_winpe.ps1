@@ -118,7 +118,7 @@ robocopy "$scriptPath\" "$MountPath\Windows\System32\" autobuild.ps1
 # Write out Startnet.cmd, which will run when WinPE boots. In turn, this will launch autobuild.ps1 which will run autobuild.py (Glazier)
 $Startnet = @"
 wpeinit
-start PowerShell -Nol -W Mi
+start /wait PowerShell -NoL -C Start-WinREWiFi
 powershell -NoProfile -NoLogo -Command Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
 powershell -NoProfile -NoLogo -WindowStyle Maximized -NoExit -File "X:\Windows\System32\autobuild.ps1" -config_root_path {0}
 "@ -f $config_root_path
@@ -131,3 +131,4 @@ Write-Host "Saving WIM"
 $MountMyWindowsImage | Dismount-MyWindowsImage -Save
 Write-Host "Creating ISO"
 New-OSDCloud.iso
+New-OSDCloud.usb

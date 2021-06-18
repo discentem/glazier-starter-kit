@@ -1,5 +1,5 @@
 Param(
-    [string]config_root_path="http://glazier"
+    [string]$config_root_path="http://glazier"
 )
 
 if ($config_root_path -eq "") {
