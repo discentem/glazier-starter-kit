@@ -20,6 +20,16 @@ if ((Test-Path $abjson) -eq $True) {
     }
 }
 
+function isURIWeb($address) {
+	$uri = $address -as [System.URI]
+	$uri.AbsoluteURI -ne $null -and $uri.Scheme -match '[http|https]'
+}
+
+if (!(isURIWeb($config_server))) {
+    Write-Host "$config_server is not a valid url"
+    exit(1)
+}
+
 # $pyVersion is the Python version that will be downloaded
 $pyVersion = "3.9.5"
 # $pythonSavePath is place where the Python installer will be downloaded on disk
@@ -116,7 +126,7 @@ robocopy "C:\glazier\" "$MountPath\glazier\" /E /PURGE
 
 Write-Host "Copying glazier-resources to WIM"
 mkdir "$MountPath\glazier-resources"
-robocopy "$scriptPath\glazier-resources" "$MountPath\glazier-resources" \*.* /E /PURGE
+robocopy "$scriptPath\..\glazier-resources\" "$MountPath\glazier-resources\" *.* /E /PURGE
 
 Write-Host "Copying autobuild.ps1 to WIM"
 # Copy autobuild.ps1 into WIM
