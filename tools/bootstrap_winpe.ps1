@@ -83,7 +83,7 @@ while ((Get-FileHash ($pythonSavePath) -Algorithm MD5).Hash -ne $pythonInstallHa
 }
 
 # This is needed to make StartWinRE-Wifi work
-Edit-OSDCloud.winpe -DriverPath c:\drivers
+Edit-OSDCloud.winpe -DriverPath $driver_path -PSModuleCopy "PShot"
 
 # Mount our WIM. Borrowed from https://github.com/OSDeploy/OSD/blob/master/Public/OSDCloud/Edit-OSDCloud.winpe.ps1
 $WorkspacePath = Get-OSDCloud.workspace -ErrorAction Stop
@@ -138,6 +138,7 @@ robocopy "$scriptPath\" "$MountPath\Windows\System32\" autobuild.ps1 /PURGE
 # Write out Startnet.cmd, which will run when WinPE boots. This will launch the CLI Wifi menu and then autobuild.ps1.
 $Startnet = @"
 wpeinit
+start powershell
 start /wait PowerShell -NoL -C Start-WinREWiFi
 powershell -NoProfile -NoLogo -Command Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
 powershell -NoProfile -NoLogo -WindowStyle Maximized -NoExit -File "X:\Windows\System32\autobuild.ps1" -config_server {0}
