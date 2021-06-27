@@ -82,18 +82,14 @@ while ((Get-FileHash ($pythonSavePath) -Algorithm MD5).Hash -ne $pythonInstallHa
     curl $pyEXEUrl -UseBasicParsing -OutFile $pythonSavePath
 }
 
-# This is needed to make StartWinRE-Wifi work
+# Edit-OSDCloud is needed to make StartWinRE-Wifi work
+# PShot is useful for taking screenshots within WinPE
 Edit-OSDCloud.winpe -DriverPath $driver_path -PSModuleCopy "PShot"
 
 # Mount our WIM. Borrowed from https://github.com/OSDeploy/OSD/blob/master/Public/OSDCloud/Edit-OSDCloud.winpe.ps1
 $WorkspacePath = Get-OSDCloud.workspace -ErrorAction Stop
 $MountMyWindowsImage = Mount-MyWindowsImage -ImagePath "$WorkspacePath\Media\Sources\boot.wim"
 $MountPath = $MountMyWindowsImage.Path
-
-# Add all the drivers. Copied from https://github.com/OSDeploy/OSD/blob/master/Public/OSDCloud/Edit-OSDCloud.winpe.ps1#L117-L119
-# foreach ($driver in $driver_path) {
-#     Add-WindowsDriver -Path "$($MountPath)" -Driver "$driver" -Recurse -ForceUnsigned
-# }
 
 # $pyTargetDir is the directory where Python will get installed
 $pyTargetDir = "$MountPath\Python"
