@@ -7,6 +7,11 @@ Param(
 # $scriptPath is the absolute path where this script is executing from
 $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 
+if ((Test-Path "$scriptPath\autobuild.ps1") -eq $False) {
+    Write-Host "$scriptPath\autobuild.ps1 not found"
+    exit(1)
+}
+
 # if $scriptPath\autobuild.json exists, get a value for $config_root_path from it. Note tools\autobuild.json is in the .gitignore file.
 $abjson = "$scriptPath\autobuild.json"
 if ((Test-Path $abjson) -eq $True) {
