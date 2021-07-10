@@ -12,6 +12,11 @@ if ((Test-Path "$scriptPath\autobuild.ps1") -eq $False) {
     exit(1)
 }
 
+if ((Test-Path "$scriptPath\..\glazier-resources\") -eq $False) {
+    Write-Host "$scriptPath\..\glazier-resources\ not found"
+    exit(1)
+}
+
 # if $scriptPath\autobuild.json exists, get a value for $config_root_path from it. Note tools\autobuild.json is in the .gitignore file.
 $abjson = "$scriptPath\autobuild.json"
 if ((Test-Path $abjson) -eq $True) {
@@ -89,7 +94,7 @@ while ((Get-FileHash ($pythonSavePath) -Algorithm MD5).Hash -ne $pythonInstallHa
 
 # Edit-OSDCloud is needed to make StartWinRE-Wifi work
 # PShot is useful for taking screenshots within WinPE
-Edit-OSDCloud.winpe -DriverPath $driver_path -PSModuleCopy "PShot"
+Edit-OSDCloud.winpe -DriverPath $driver_path
 
 # Mount our WIM. Borrowed from https://github.com/OSDeploy/OSD/blob/master/Public/OSDCloud/Edit-OSDCloud.winpe.ps1
 $WorkspacePath = Get-OSDCloud.workspace -ErrorAction Stop
