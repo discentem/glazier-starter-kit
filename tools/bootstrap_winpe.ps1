@@ -22,7 +22,7 @@ $abjson = "$scriptPath\autobuild.json"
 if ((Test-Path $abjson) -eq $True) {
     $json = Get-Content $abjson | Out-String | ConvertFrom-Json
     $config_server = $json.config_server
-# get a value for $config_root_path from the CLI flags. If it's empty, exit 1 (bail)
+# get a value for $config_server from the CLI flags. If it's empty, exit 1 (bail)
 } else {
     if ($config_server -eq "") {
         Write-Host "config_server cannot be an empty string"
