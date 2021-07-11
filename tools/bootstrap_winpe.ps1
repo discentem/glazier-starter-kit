@@ -12,6 +12,7 @@ if ((Test-Path "$scriptPath\autobuild.ps1") -eq $False) {
     exit(1)
 }
 
+# Make sure glazier-resources is available to copy
 if ((Test-Path "$scriptPath\..\glazier-resources\") -eq $False) {
     Write-Host "$scriptPath\..\glazier-resources\ not found"
     exit(1)
@@ -35,6 +36,7 @@ function isURIWeb($address) {
 	$uri.AbsoluteURI -ne $null -and $uri.Scheme -match '[http|https]'
 }
 
+# ensure $config_server is a valid url. This avoids avoid frustration, trust me.
 if (!(isURIWeb($config_server))) {
     Write-Host "$config_server is not a valid url"
     exit(1)
@@ -49,7 +51,7 @@ $pythonInstallHash = "53a354a15baed952ea9519a7f4d87c3f"
 # $pyEXEUrl is the url where the Python installer will be obtained
 $pyEXEUrl = "https://www.python.org/ftp/python/$pyVersion/python-$pyVersion-amd64.exe"
 
-# Install Chocoately. Borrowed from https://tseknet.com/blog/chocolatey
+# Install Chocoately. Borrowed from https://tseknet.com/blog/chocolatey.
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Force
 iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex
 # Install Windows ADK
@@ -58,7 +60,7 @@ choco install windows-adk-winpe -y
 
 # Install OSD Powershell Module. This isn't idempotent yet.
 (Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force) -and (Install-Module OSD -Force)
-# Import the module. This isn't idempotent yet
+# Import the module. This isn't idempotent yet.
 Import-Module OSD
 
 # Create OSDCloud template if not created yet.
@@ -93,7 +95,6 @@ while ((Get-FileHash ($pythonSavePath) -Algorithm MD5).Hash -ne $pythonInstallHa
 }
 
 # Edit-OSDCloud is needed to make StartWinRE-Wifi work
-# PShot is useful for taking screenshots within WinPE
 Edit-OSDCloud.winpe -DriverPath $driver_path
 
 # Mount our WIM. Borrowed from https://github.com/OSDeploy/OSD/blob/master/Public/OSDCloud/Edit-OSDCloud.winpe.ps1
@@ -121,6 +122,7 @@ Write-Host "Cloning and pulling Glazier github repo..."
 & 'C:\Program Files\Git\bin\git.exe' -C C:\glazier\ pull
 Write-Host "Install Glazier pip requirements"
 # Reload the path: https://stackoverflow.com/questions/17794507/reload-the-path-in-powershell
+# This is required so pip can install from git repositories
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User") 
 # Install Glazier requirements
 & $pyEXE -m pip install -r C:\glazier\requirements.txt
@@ -128,8 +130,6 @@ Write-Host "Running '$pyEXE -m pip install pywin32'"
 # Install an additional Glazier dependency that isn't included in requirements.txt.
 & $pyEXE -m pip install pywin32
 
-
-# Recursively copy Glazier source code into WIM
 Write-Host "Copying Glazier source code inside the image"
 robocopy "C:\glazier\" "$MountPath\glazier\" /E /PURGE
 
