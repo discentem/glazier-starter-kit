@@ -1,7 +1,8 @@
 Param(
     [string]$config_server = "",
     [string]$make_usb="",
-    [string]$driver_path = "C:\drivers"
+    [string]$driver_path = "C:\drivers",
+    [bool]$export_drivers = $false
 )
 
 # $scriptPath is the absolute path where this script is executing from
@@ -40,6 +41,11 @@ function isURIWeb($address) {
 if (!(isURIWeb($config_server))) {
     Write-Host "$config_server is not a valid url"
     exit(1)
+}
+
+if($export_drivers) {
+    New-Item -ItemType Directory -Force -Path $driver_path	
+    dism /online /export-driver /destination:$driver_path
 }
 
 # $pyVersion is the Python version that will be downloaded
